@@ -21,7 +21,7 @@ npm install sharp-pdf
     - "loading" - PDF file loading progress, data is an object containing `total` number of bytes and `loaded` number of bytes.
     - "loaded" - PDF file loaded, data is an object containing `pages` info.
     - "image" - Image parsing complete, data is the `ImageData`.
-    - "error" - An image parsing error occurs, data is the error info.
+    - "error" - An image parsing error occurs, data is an object containing the `error` info.
     - "done" - All images are parsed, data is an array containing all `ImageData`.
 
 Returns `Promise<ImageData[]>` - Resolve with an array of object containing the following info:
