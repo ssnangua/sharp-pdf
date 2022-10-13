@@ -1,7 +1,7 @@
 {
   "name": "sharp-pdf",
   "version": "0.1.0",
-  "description": "Exports images from a PDF file, or generate a PDF file from images. Base on sharp, PDF.js(for parsing PDFs) and jsPDF(for generate PDFs).",
+  "description": "Export images from a PDF file, or generate a PDF file from images. Base on sharp, PDF.js(for parsing PDFs) and jsPDF(for generate PDFs).",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

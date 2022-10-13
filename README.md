@@ -1,6 +1,6 @@
 # sharp-pdf
 
-Exports images from a PDF file, or generate a PDF file from images.
+Export images from a PDF file, or generate a PDF file from images.
 
 Base on [sharp](https://www.npmjs.com/package/sharp), [PDF.js](https://www.npmjs.com/package/pdfjs-dist)(for parsing PDFs) and [jsPDF](https://www.npmjs.com/package/jspdf)(for generate PDFs).
 

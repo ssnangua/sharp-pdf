@@ -5,7 +5,7 @@ const PDF = require("./index");
 if (!fs.existsSync("./output")) fs.mkdirSync("./output");
 
 /**
- * Exports images from a PDF file
+ * Export images from a PDF file
  */
 PDF.sharpsFromPdf("./input.pdf", {
   sharpOptions: {},

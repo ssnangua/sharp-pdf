@@ -17,7 +17,7 @@ export declare interface ImageData {
 }
 
 /**
- * Exports images from a PDF file
+ * Export images from a PDF file
  */
 export declare function sharpsFromPdf(
   src: GetDocumentParameters,
