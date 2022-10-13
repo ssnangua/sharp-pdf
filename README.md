@@ -12,7 +12,7 @@ npm install sharp-pdf
 
 ## Exports images from a PDF file
 
-### `PDF.sharpsFromPdf(src, options?): Promise<>`
+### `PDF.sharpsFromPdf(src, options?): Promise<ImageData[]>`
 
 - `src` [GetDocumentParameters](https://github.com/mozilla/pdfjs-dist/blob/master/types/src/display/api.d.ts#L190) - String containing the filesystem path to a PDF file, or a [DocumentInitParameters](https://github.com/mozilla/pdfjs-dist/blob/master/types/src/display/api.d.ts#L10) object.
 - `options` Object _(optional)_
@@ -73,7 +73,7 @@ PDF.sharpsFromPdf({
 
 ## Generate a PDF file from images
 
-### `PDF.sharpsToPdf(images, fileOut, options?)`
+### `PDF.sharpsToPdf(images, fileOut, options?): Promise<Object>`
 
 - `images` Array<Sharp | Object>
   - `image` Sharp - Sharp instance.
@@ -88,6 +88,8 @@ PDF.sharpsFromPdf({
       - `pages` Number - Number of images.
       - `pageWidth` Number - Page width in pixels.
       - `pageHeight` Number - Page height in pixels.
+
+Returns `Promise<Object>` - Resolve with an object containing the PDF file `size` info.
 
 #### `ImageOptions`
 
