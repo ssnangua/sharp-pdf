@@ -119,6 +119,8 @@ Returns `Promise<Object>` - Resolve with an object containing the PDF file `size
     - `height` Number - Image height in pixels.
 
 ```js
+const fs = require("fs");
+const sharp = require("sharp");
 const PDF = require("sharp-pdf");
 
 PDF.sharpsToPdf(
@@ -134,7 +136,9 @@ PDF.sharpsToPdf(
 
 // options
 PDF.sharpsToPdf(
-  fs.readdirSync("./Comic").map((file) => sharp(`./Comic/${file}`)),
+  fs
+    .readdirSync("./Comic")
+    .map((file) => sharp(`./Comic/${file}`).jpeg({ quality: 20 })),
   "./Comic.pdf",
   {
     pdfOptions: {
@@ -144,8 +148,12 @@ PDF.sharpsToPdf(
       },
     },
     imageOptions: {
+      format: "JPEG",
+      compression: "FAST",
       fit: true,
-      margin: 10,
+      handler({ index, pages }) {
+        console.log(index + 1, "/", pages);
+      },
     },
   }
 );
