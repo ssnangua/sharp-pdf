@@ -10,7 +10,7 @@ Base on [sharp](https://www.npmjs.com/package/sharp), [PDF.js](https://www.npmjs
 npm install sharp-pdf
 ```
 
-## Exports images from a PDF file
+## Export images from a PDF file
 
 ### `PDF.sharpsFromPdf(src, options?): Promise<ImageData[]>`
 
