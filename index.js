@@ -1,10 +1,19 @@
 const fs = require("fs");
 const sharp = require("sharp");
-const { getDocument, OPS } = require("pdfjs-dist/legacy/build/pdf.js");
+const {
+  getDocument,
+  OPS,
+  GlobalWorkerOptions,
+} = require("pdfjs-dist/legacy/build/pdf.js");
+const pdfjsWorker = require("pdfjs-dist/legacy/build/pdf.worker.entry");
 const { jsPDF } = require("jspdf");
 
+const doDelay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function sharpsFromPdf(src, options = {}) {
-  const { sharpOptions, handler = () => {} } = options;
+  const { sharpOptions, delay = -1, handler = () => {} } = options;
+
+  GlobalWorkerOptions.workerSrc = options.workerSrc ? pdfjsWorker : "";
 
   // doc
   const docTask = getDocument(src);
@@ -51,8 +60,16 @@ async function sharpsFromPdf(src, options = {}) {
             pageImages,
             pageImageIndex: i,
           };
-          handler("image", item);
           images.push(item);
+          handler("image", item);
+          if (delay >= 0) await doDelay(delay);
+        } else {
+          handler("skip", {
+            pages,
+            pageIndex: p,
+            pageImages,
+            pageImageIndex: i,
+          });
         }
       } catch (error) {
         handler("error", {
@@ -73,54 +90,75 @@ function isSharp(image) {
   return image && typeof image.metadata === "function";
 }
 
-async function sharpsToPdf(images, fileOut, options = {}) {
-  const { pdfOptions: po = {}, imageOptions: io = {}, init } = options;
+async function sharpsToPdf(images, output, options = {}) {
+  const {
+    pdfOptions: po = {},
+    imageOptions: io = {},
+    autoSize = false,
+    init,
+  } = options;
 
-  // doc
   const doc = new jsPDF({ ...po, unit: "pt" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  const pages = images.length;
-
   // init handler
   init && init({ doc, pages, pageWidth, pageHeight });
 
+  let pageWidth = doc.internal.pageSize.getWidth();
+  let pageHeight = doc.internal.pageSize.getHeight();
+
+  const pages = images.length;
+
+  doc.deletePage(1);
+
   for (let index = 0; index < images.length; index++) {
     let item = images[index];
-
-    // addPage
-    if (index > 0) {
-      doc.addPage(po.format || "a4", po.orientation || "p");
-    }
-
     if (isSharp(item)) item = { image: item };
     const { image, options: _io = {} } = item;
     if (!isSharp(image)) continue;
 
-    const o = {
-      ...io,
-      ..._io,
-      fit: _io.fit || (io.fit && _io.fit !== false),
-    };
-
-    // format
-    const format = o.format || (await image.metadata()).format.toUpperCase();
-    if (!format) continue;
-    if (o.format) image.toFormat(o.format.toLowerCase());
+    const o = { ...io, ..._io };
+    const fit = _io.fit || (io.fit && _io.fit !== false);
+    const margin = o.margin || 0;
 
     // imageData
     const { data, info } = await image.toBuffer({ resolveWithObject: true });
 
+    // addPage
+    const pageFormat = autoSize
+      ? [info.width + margin, info.height + margin]
+      : po.format || "a4";
+    const orientation = autoSize
+      ? info.width > info.height
+        ? "l"
+        : "p"
+      : po.orientation || "p";
+    doc.addPage(pageFormat, orientation);
+
+    // page width/height
+    if (autoSize) {
+      pageWidth = info.width + margin;
+      pageHeight = info.height + margin;
+    }
+
+    // image format
+    const format = o.format || (await image.metadata()).format.toUpperCase();
+    if (!format) continue;
+    if (o.format) image.toFormat(o.format.toLowerCase());
+
     // image width/height
-    const scale = o.fit
-      ? Math.min(pageWidth / info.width, pageHeight / info.height)
-      : 1;
-    let width = o.width || info.width * scale;
-    let height = o.height || info.height * scale;
-    if (o.fit && o.margin) {
-      width -= o.margin * 2;
-      height -= o.margin * 2;
+    let width, height;
+    if (autoSize) {
+      width = info.width;
+      height = info.height;
+    } else {
+      const scale = fit
+        ? Math.min(pageWidth / info.width, pageHeight / info.height)
+        : 1;
+      width = o.width || info.width * scale;
+      height = o.height || info.height * scale;
+      if (fit && o.margin) {
+        width -= o.margin * 2;
+        height -= o.margin * 2;
+      }
     }
 
     // image x/y
@@ -128,7 +166,7 @@ async function sharpsToPdf(images, fileOut, options = {}) {
     const y = o.y || (pageHeight - height) / 2;
 
     // page handler
-    const addImage =
+    let addImage =
       o.handler &&
       o.handler({
         doc,
@@ -145,6 +183,7 @@ async function sharpsToPdf(images, fileOut, options = {}) {
         width,
         height,
       });
+    if (addImage instanceof Promise) addImage = await addImage;
 
     if (addImage !== false) {
       doc.addImage(
@@ -161,10 +200,23 @@ async function sharpsToPdf(images, fileOut, options = {}) {
     }
   }
 
-  // write PDF file
-  return doc.save(fileOut, { returnPromise: true }).then(() => {
-    return { size: fs.statSync(fileOut).size };
-  });
+  if (typeof output === "string") {
+    // write PDF file
+    // return doc.save(output, { returnPromise: true }).then(() => {
+    //   return { size: fs.statSync(output).size };
+    // });
+    const buffer = Buffer.from(doc.output("arraybuffer"));
+    return new Promise((resolve, reject) => {
+      fs.writeFile(output, buffer, (err) => {
+        if (err) reject(err);
+        else resolve({ size: buffer.length });
+      });
+    });
+  } else if (typeof output?.type === "string") {
+    return doc.output(output.type, output.options);
+  } else {
+    return doc.output();
+  }
 }
 
 module.exports = {

@@ -9,12 +9,14 @@ if (!fs.existsSync("./output")) fs.mkdirSync("./output");
  */
 PDF.sharpsFromPdf("./input.pdf", {
   sharpOptions: {},
+  delay: -1,
+  workerSrc: false,
   handler(event, data) {
     if (event === "loading") {
       console.log("loading PDF:", (data.loaded / data.total) * 100);
     } else if (event === "loaded") {
       console.log("PDF loaded");
-    } else if (event === "image" || event === "error") {
+    } else if (event === "image" || event === "skip" || event === "error") {
       console.log("parsing images:", (data.pageIndex / data.pages) * 100);
     } else if (event === "done") {
       console.log("done");
@@ -39,6 +41,7 @@ PDF.sharpsToPdf(
     sharp("./image2.jpg"),
   ],
   "./output/output.pdf",
+  // { type: "arraybuffer" },
   {
     pdfOptions: {
       format: "b5",
@@ -61,10 +64,11 @@ PDF.sharpsToPdf(
         return false;
       },
     },
+    // autoSize: true,
     // init({ doc, ...params }) {
     //   console.log("init", params);
     // },
   }
-).then(({ size }) => {
-  console.log(size);
+).then((data) => {
+  console.log(data);
 });

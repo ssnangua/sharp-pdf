@@ -23,8 +23,10 @@ export declare function sharpsFromPdf(
   src: GetDocumentParameters,
   options?: {
     sharpOptions?: SharpOptions;
+    delay?: Number;
+    workerSrc?: Boolean;
     handler?: (
-      event: "loading" | "loaded" | "image" | "error" | "done",
+      event: "loading" | "loaded" | "image" | "skip" | "error" | "done",
       data: any
     ) => void;
   }
@@ -67,6 +69,20 @@ export declare interface ImageOptions {
   handler?: (params: PageParams) => void;
 }
 
+export declare type OutputTypes =
+  | String
+  | { type: "arraybuffer" }
+  | { type: "blob" }
+  | { type: "bloburi" | "bloburl" }
+  | { type: "datauristring" | "dataurlstring"; options?: { filename?: string } }
+  | {
+      type: "pdfobjectnewwindow" | "pdfjsnewwindow" | "dataurlnewwindow";
+      options?: { filename?: string };
+    }
+  | { type: "dataurl" | "datauri"; options?: { filename?: string } }
+  | undefined
+  | null;
+
 /**
  * Generate a PDF file from images
  */
@@ -78,10 +94,11 @@ export declare function sharpsToPdf(
         options?: ImageOptions;
       }
   >,
-  fileOut: string,
+  output: OutputTypes,
   options?: {
     pdfOptions?: jsPDFOptions;
     imageOptions?: ImageOptions;
+    autoSize?: Boolean;
     init?: (params: InitParams) => void;
   }
 ): Promise<{ size: number }>;

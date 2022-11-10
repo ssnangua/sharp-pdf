@@ -17,12 +17,15 @@ npm install sharp-pdf
 - `src` [GetDocumentParameters](https://github.com/mozilla/pdfjs-dist/blob/master/types/src/display/api.d.ts#L190) - String containing the filesystem path to a PDF file, or a [DocumentInitParameters](https://github.com/mozilla/pdfjs-dist/blob/master/types/src/display/api.d.ts#L10) object.
 - `options` Object _(optional)_
   - `sharpOptions` Object _(optional)_ - Sharp constructor [options](https://sharp.pixelplumbing.com/api-constructor#parameters).
+  - `delay` Number _(optional)_ - Number of milliseconds to delay (setTimeout) after an image is parsed. If you need to show progress on the UI (electron/nwjs), you can use this option to avoid blocking. Default by `-1` (no delay).
+  - `workerSrc` Boolean _(optional)_ - Set `GlobalWorkerOptions.workerSrc` to `pdf.worker.entry`. Default by `false`.
   - `handler` (event, data) => void _(optional)_
     - "loading" - PDF file loading progress, data is an object containing `total` number of bytes and `loaded` number of bytes.
     - "loaded" - PDF file loaded, data is an object containing `pages` info.
-    - "image" - Image parsing complete, data is the `ImageData`.
+    - "image" - Image parsing complete, data is the [ImageData](#imagedata).
+    - "skip" - Skip an invalid image.
     - "error" - An image parsing error occurs, data is an object containing the `error` info.
-    - "done" - All images are parsed, data is an array containing all `ImageData`.
+    - "done" - All images are parsed, data is an array containing all [ImageData](#imagedata).
 
 Returns `Promise<ImageData[]>` - Resolve with an array of object containing the following info:
 
@@ -56,7 +59,7 @@ PDF.sharpsFromPdf("./input.pdf", {
       console.log("loading PDF:", (data.loaded / data.total) * 100);
     } else if (event === "loaded") {
       console.log("PDF loaded");
-    } else if (event === "image" || event === "error") {
+    } else if (event === "image" || event === "skip" || event === "error") {
       console.log("parsing images:", (data.pageIndex / data.pages) * 100);
     } else if (event === "done") {
       console.log("done");
@@ -73,15 +76,16 @@ PDF.sharpsFromPdf({
 
 ## Generate a PDF file from images
 
-### `PDF.sharpsToPdf(images, fileOut, options?): Promise<Object>`
+### `PDF.sharpsToPdf(images, output, options?): Promise<Object>`
 
 - `images` Array<Sharp | Object>
   - `image` Sharp - Sharp instance.
-  - `options` ImageOptions _(optional)_ - Image options.
-- `fileOut` String - The path to write the PDF file to.
+  - `options` [ImageOptions](#imageoptions) _(optional)_ - Image options.
+- `output` String | { type, options } - The path to write the PDF file to, or an object contains [jsPDF.output(type, options)](http://raw.githack.com/MrRio/jsPDF/master/docs/jsPDF.html#output) arguments.
 - `options` Object _(optional)_
   - `pdfOptions` Object _(optional)_ - jsPDF constructor [options](http://raw.githack.com/MrRio/jsPDF/master/docs/jsPDF.html)
-  - `imageOptions` ImageOptions _(optional)_ - Global image options.
+  - `imageOptions` [ImageOptions](#imageoptions) _(optional)_ - Global image options.
+  - `autoSize` Boolean _(optional)_ - Set page size to image size. `pdfOptions.format` and `fit` option will not work. Default by `false`.
   - `init` (params) => void _(optional)_
     - `params` Object
       - `doc` [jsPDF](http://raw.githack.com/MrRio/jsPDF/master/docs/jsPDF.html) - jsPDF instance.
@@ -89,7 +93,7 @@ PDF.sharpsFromPdf({
       - `pageWidth` Number - Page width in pixels.
       - `pageHeight` Number - Page height in pixels.
 
-Returns `Promise<Object>` - Resolve with an object containing the PDF file `size` info.
+Returns `Promise<Object>` - Resolve with an object containing the PDF file `size` info or PDF document data.
 
 #### `ImageOptions`
 
@@ -182,17 +186,42 @@ PDF.sharpsToPdf(
           baseline: "bottom",
         });
 
-        // returning `false` will skip the default add image operation,
+        // return or resolve with `false`,
+        // will skip the default add image operation,
         // and you can add image by yourself.
         const { imageData, format, x, y, width, height } = params;
         doc.addImage(imageData, format, x, y, width, height);
         return false;
+        // or
+        // return new Promise(resolve => setTimeout(() => resolve(false), 100));
       },
     },
   }
 );
+
+// output types
+PDF.sharpsToPdf(
+  [ sharp("./image1.jpg") ],
+  { type: "arraybuffer" }
+).then((arraybuffer) => {
+  const buffer = Buffer.from(arraybuffer);
+  fs.writeFileSync("output.pdf", buffer);
+});
 ```
 
 ## Reference
 
 [PDF Export Images](https://www.npmjs.com/package/pdf-export-images)
+
+
+## Change Log
+
+### 0.1.3
+
+- `sharpsFromPdf()`
+    - Added `delay` and `workerSrc` options
+    - Added `skip` event
+- `sharpsToPdf()`
+    - Added `autoSize` option
+    - Supported promise handler
+    - supported output types
